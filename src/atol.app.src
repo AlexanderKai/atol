@@ -1,0 +1,11 @@
+{application, atol,
+	[
+		{description, "Atol"},
+		{vsn, "0.1"},
+		{applications,[kernel,stdlib]},
+		{modules,[atol, atol_worker]},
+		{registered,[atol]},
+	 	{mod,{atol,[]}},
+		{env, []}
+	]
+}.
