@@ -1,6 +1,5 @@
 -module(atol_worker).
 -compile(export_all).
--include_lib("main.hrl").
 
 -define(ETS, atol_ets).
 -define(TRANSACTIONS, atol_transactions).
