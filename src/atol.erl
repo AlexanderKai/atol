@@ -1,5 +1,4 @@
 -module(atol).
--include_lib("main.hrl").
 -behaviour(supervisor).
 -behaviour(application).
 -export([init/1, start/1, start/2, stop/1, sell/3, auth/0, verify_status/0]).
@@ -24,7 +23,6 @@ init([Application]) ->
 	Pools = proplists:get_value(atol_workers, AtolSettings),
 	io:format("=============== ATOL ===================~n~p\n",[Pools]),
     PoolSpecs = lists:map(fun({Name, SizeArgs, WorkerArgs}) ->
-		?dbgv("Name", Name),
 		Worker = atol_worker,
         PoolArgs = [{name, {local, Name}},
                     {worker_module, Worker}] ++ SizeArgs,
@@ -48,10 +46,7 @@ init([Application]) ->
     {ok, {{one_for_one, 10, 10}, PoolSpecs}}
 	catch
 		E1:E2 ->
-		?dbgv("", E1), 
-		?dbgv("", E2),
-		?dbgv("stack", erlang:get_stacktrace())
-
+			io:format("~p~n~p~n~p~n", [E1, E2, erlang:get_stacktace()])
 	end.
 
 check_token() ->
