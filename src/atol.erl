@@ -46,7 +46,7 @@ init([Application]) ->
     {ok, {{one_for_one, 10, 10}, PoolSpecs}}
 	catch
 		E1:E2 ->
-			io:format("~p~n~p~n~p~n", [E1, E2, erlang:get_stacktace()])
+			io:format("~p~n~p~n~p~n", [E1, E2, erlang:get_stacktrace()])
 	end.
 
 check_token() ->
