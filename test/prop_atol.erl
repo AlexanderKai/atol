@@ -25,6 +25,7 @@ prop_test() ->
 
 setup() ->
 	io:format("setup~n", []),
+	meck:new(hackney, [passthrough]),
 	ets:new(hackney_requests, []),
 	Request = fun(post, Site, _Headers, Body, Options) ->
 		UUID = l2:uuid(),
@@ -46,7 +47,6 @@ setup() ->
 	end,
 	%Res = application:start(atol),
 	atol:start(review),
-	meck:new(hackney, [passthrough]),
 	meck:expect(hackney, request, Request),
 	meck:expect(hackney, body, Body),
 	%io:format("setup~n", [Res]),
