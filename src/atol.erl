@@ -15,6 +15,7 @@ init([Application]) ->
 	process_flag(trap_exit, true),
 	try
 	%{ok, AtolSettings} = application:get_env(Application, atol),
+	io:format("~nAll settings~n~p~n", [application:get_all_env()],
 	{ok, AtolSettings} = application:get_env(atol, settings),
 	ets:new(?ETS, [{write_concurrency, true}, {read_concurrency, true}, set, named_table]),
 	ets:insert(?ETS, AtolSettings),
