@@ -51,18 +51,28 @@ init([Application]) ->
 	end.
 
 check_token() ->
-{_, TokenTime} = ets:lookup(?ETS, token_time),
-case qdate:compare(l:current_time(), qdate:to_now(qdate:add_minutes(30, TokenTime))) of
-	1 -> 
-		Auth = auth(),
-		case Auth of
-			{error, Answer} -> {error, Answer};
-			ok -> 
-				ok
-		end;
-	_ ->
-		ok
-end.
+	Var = case ets:lookup(?ETS, token_time) of
+		[] -> 
+			check;
+		{_, TokenTime} ->
+			case qdate:compare(l:current_time(), qdate:to_now(qdate:add_minutes(30, TokenTime))) of
+				1 -> 
+					check;
+				_ ->
+					ok
+			end
+	end,
+	case Var of
+		check -> 
+			Auth = auth(),
+			case Auth of
+				{error, Answer} -> {error, Answer};
+				ok -> 
+					ok
+			end;
+		ok ->
+			ok
+	end.
 
 
 verify_status() ->
