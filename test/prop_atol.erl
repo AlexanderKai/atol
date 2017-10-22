@@ -18,12 +18,45 @@ prop_test() ->
 				"=======~n"
 				"Result: ~p~n"
 				"History: ~p~n",
-				[lists:nth(length(History), Cmds),
-				State,Result,History]),
+				[Cmds,
+					State,Result,History]),
 				aggregate(command_names(Cmds), Result =:= ok))
 		end).
 
 setup() ->
+	application:set_env(chronos, jobs, []),
+	application:set_env(chronos, pools,
+            [
+                {chronos_worker,
+                    [
+                        {size, 40},
+                        {max_overflow, 60}
+                    ],
+                    [
+                    ]
+                },
+                {chronos_queue,
+                    [
+                        {size, 1},
+                        {max_overflow, 1}
+                    ],
+                    [
+                    ]
+                }
+            ]),
+	application:set_env(chronos, settings,
+            [
+                {debug_print, on},
+                {email, <<"">>},
+                {email_server, <<"">>},
+                {email_login, <<"">>},
+                {email_password, <<"">>},
+                {send_email_on_crash, on}
+            ]),
+        	
+
+	application:start(chronos),
+	io:format("ETS Chronos~n~p~n", [ets:info(chronos)]),
 	application:set_env(atol, settings, [
             {api, <<"v3">>},
             {login, <<"test-ru">>},
@@ -74,10 +107,11 @@ setup() ->
 %crud_db:setup().
 
 teardown() ->
-	atol:stop(),
+	application:stop(atol),
+	application:stop(chronos),
 	io:format("teardown~n", []),
 	meck:unload(hackney),
-	ets:delete(hackney_requests),
+	%ets:delete(hackney_requests),
 	io:format("teardown~n", []),
 	[].
 %crud_db:teardown().
@@ -108,13 +142,13 @@ phone() ->
 	?LET(Phone,range(89155550000, 89155559999), l:i2b(Phone)).
 
 goods() ->
-	?LET(Goods,resize(15,range($a, $z)), Goods).
+	?LET(Goods,fixed_list([resize(15,range($a, $z))]), l:l2b(Goods)).
 
 price() ->
-	number().
+	non_neg_integer().
 
 quantity() ->
-	pos_integer().
+	non_neg_integer().
 
 %% Picks whether a command should be valid under the current state.
 precondition(_State, {call, _Mod, _Fun, _Args}) -> 

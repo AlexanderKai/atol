@@ -129,13 +129,13 @@ do_get(UUID) ->
 
 
 auth() ->
-	Worker = poolboy:checkout(atol_workers),
+	Worker = poolboy:checkout(atol_worker),
 	gen_server:call(Worker, {auth}),
-	poolboy:checkin(atol_workers, Worker).
+	poolboy:checkin(atol_worker, Worker).
 
 sell(Id, Attributes, Items) ->
-	Worker = poolboy:checkout(atol_workers),
+	Worker = poolboy:checkout(atol_worker),
 	gen_server:call(Worker, {sell, Id, Attributes, Items}),
-	poolboy:checkin(atol_workers, Worker).
+	poolboy:checkin(atol_worker, Worker).
 
 
