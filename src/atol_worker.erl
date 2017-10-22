@@ -7,9 +7,9 @@
 -export[sell/4, init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2].
 
 auth() ->
-	{_,API} = ets:lookup(?ETS, api),
-	{_,Login} = ets:lookup(?ETS, login),
-	{_,Password} = ets:lookup(?ETS, password),
+	[{_,API}] = ets:lookup(?ETS, api),
+	[{_,Login}] = ets:lookup(?ETS, login),
+	[{_,Password}] = ets:lookup(?ETS, password),
 	Body = <<>>,
 	T = l:l2b([<<"login="/utf8>>,Login,<<"&pass="/utf8>>, Password]),
  	Site = l:l2b([<<"https://online.atol.ru/possystem/">>,API,<<"/getToken?">>, T]),
@@ -45,10 +45,10 @@ sell(Type, Id, Attributes, Items) ->
 
 
 do_sell(Type, Id, Attributes, Items) ->
-	{_,Token} = ets:lookup(?ETS, token),
-	{_,API} = ets:lookup(?ETS, api),
-	{_,INN} = ets:lookup(?ETS, inn),
-	{_,Group} = ets:lookup(?ETS, group),
+	[{_,Token}] = ets:lookup(?ETS, token),
+	[{_,API}] = ets:lookup(?ETS, api),
+	[{_,INN}] = ets:lookup(?ETS, inn),
+	[{_,Group}] = ets:lookup(?ETS, group),
 	Email = proplists:get_value(email, Attributes, <<"">>),
 	Phone = proplists:get_value(phone, Attributes, <<"">>),
 	%CallbackUrl =proplists:get_value(callback_url, State),
