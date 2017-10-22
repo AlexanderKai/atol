@@ -24,6 +24,25 @@ prop_test() ->
 		end).
 
 setup() ->
+	application:set_env(atol, settings, [
+            {api, <<"v3">>},
+            {login, <<"test-ru">>},
+            {password, <<"test">>},
+            {group, <<"test">>},
+            {inn, <<"113101111163">>},
+            {payment_address, <<"test.ru">>},
+            {callback_url, <<"">>},
+            {atol_workers, [
+                {atol_worker,
+                    [
+                        {size, 10},
+                        {max_overflow, 20}
+                    ],
+                    [
+                    ]
+                }
+            ]}
+            ]),
 	io:format("setup~n", []),
 	meck:new(hackney, [passthrough]),
 	ets:new(hackney_requests, []),
