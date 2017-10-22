@@ -138,11 +138,11 @@ init(Args) ->
 	process_flag(trap_exit, true),
 	{ok, Args}.
 
-handle_call({sell, Group, Id, Attributes, Items}, {_From,_}, State) ->
+handle_call({sell, Id, Attributes, Items}, {_From,_}, State) ->
     Result = sell(sell, Id, Attributes, Items),
 	{reply, Result, State};
 
-handle_call({sell_refund, Group, Id, Attributes, Items}, {_From,_}, State) ->
+handle_call({sell_refund, Id, Attributes, Items}, {_From,_}, State) ->
     Result = sell(sell_refund, Id, Attributes, Items),
 	{reply, Result, State};
 
