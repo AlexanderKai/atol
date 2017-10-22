@@ -147,7 +147,7 @@ handle_call({sell_refund, Id, Attributes, Items}, {_From,_}, State) ->
 	{reply, Result, State};
 
 
-handle_call({auth, Settings}, {_From,_}, State) ->
+handle_call({auth}, {_From,_}, State) ->
 	%Login = proplists:get_value(login, S),
 	%Password = proplists:get_value(password, State),
 	Result = auth(),
