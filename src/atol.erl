@@ -1,7 +1,7 @@
 -module(atol).
 -behaviour(supervisor).
 -behaviour(application).
--export([init/1, start/1, start/2, stop/1, sell/3, auth/0, verify_status/0]).
+-export([init/1, start/1, start/2, stop/1, sell/3, auth/0, verify_status/0, check_token/0]).
 
 -define(ETS, atol_ets).
 -define(TRANSACTIONS, atol_transactions).
@@ -66,10 +66,9 @@ end.
 
 
 verify_status() ->
-	[].
-%	FirstKey = ets:first(?TRANSACTIONS),
-%	DeleteKeys = verify_status(FirstKey),
-%	delete_keys(DeleteKeys).
+	FirstKey = ets:first(?TRANSACTIONS),
+	DeleteKeys = verify_status(FirstKey),
+	delete_keys(DeleteKeys).
 
 verify_status(Key) ->
 	verify_status(Key, []).
