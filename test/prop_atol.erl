@@ -7,11 +7,19 @@
 
 
 prop_test() ->
-	?FORALL(Cmds, commands(?MODULE),
+	Res = 
+	?SETUP(fun () ->       % setup function
+           setup(),
+    	   fun () ->   % finalize function
+				teardown(),
+				ok
+           end
+ 		end,
+		?FORALL(Cmds, commands(?MODULE),
 		begin
-			setup(),
+			%setup(),
 			{History, State, Result} = run_commands(?MODULE, Cmds),
-			teardown(),
+			%teardown(),
 			?WHENFAIL(io:format("=======~n"
 				"Failing command: ~p~n"
 				"At state: ~p~n"
@@ -21,9 +29,30 @@ prop_test() ->
 				[Cmds,
 					State,Result,History]),
 				aggregate(command_names(Cmds), Result =:= ok))
-		end).
+		end)),
+	Res.
+
+sprop_test() ->
+	setup(),
+	Res = ?FORALL(Cmds, commands(?MODULE),
+		begin
+			{History, State, Result} = run_commands(?MODULE, Cmds),
+			?WHENFAIL(io:format("=======~n"
+				"Failing command: ~p~n"
+				"At state: ~p~n"
+				"=======~n"
+				"Result: ~p~n"
+				"History: ~p~n",
+				[Cmds,
+					State,Result,History]),
+				aggregate(command_names(Cmds), Result =:= ok))
+		end),
+	teardown(),
+	Res.
+
 
 setup() ->
+	%ets:delete(hackney_requests),
 	application:set_env(chronos, jobs, []),
 	application:set_env(chronos, pools,
             [
@@ -56,7 +85,6 @@ setup() ->
         	
 
 	application:start(chronos),
-	io:format("ETS Chronos~n~p~n", [ets:info(chronos)]),
 	application:set_env(atol, settings, [
             {api, <<"v3">>},
             {login, <<"test-ru">>},
@@ -78,24 +106,52 @@ setup() ->
             ]),
 	io:format("setup~n", []),
 	meck:new(hackney, [passthrough]),
-	ets:new(hackney_requests, []),
-	Request = fun(post, Site, _Headers, Body, Options) ->
+	ets:new(atol_hackney_requests, [named_table, set, public]),
+	io:format("in main ~p~n", [pid_to_list(self())]),
+	Request = fun(Type, Site, _Headers, Body, Options) ->
 		UUID = l2:uuid(),
 		Atol = binary:match(Site, <<"https://online.atol.ru/possystem/">>) =/= nomatch,
+		Auth = binary:match(Site, <<"getToken">>) =/= nomatch,
 		Sell = binary:match(Site, <<"sell">>) =/= nomatch,
 		SellRefund = binary:match(Site, <<"sell_refund">>) =/= nomatch,
-		case [Atol, Sell, SellRefund] of
-			[true, true, false] ->
-		   		[];
-			_ ->
-				[]
+		[APIFun, Answer] = if
+			Auth == true ->
+				[<<"auth">>, [
+					{<<"code">>, 0},
+					{<<"text">>, null},
+					{<<"token">>, l2:uuid()}
+				]];
+			Sell == true orelse SellRefund == true ->
+				[<<"sell">>,[
+				 	{<<"uuid">>, l2:uuid()},
+					{<<"timestamp">>, <<"">>},
+					{<<"error">>, null},
+					{<<"status">>, <<"wait">>}
+				]];
+			true ->
+				[<<"error">>, <<"">>]
 		end,		
-		ets:insert(hackney_requests, [{UUID, [{body, <<"">>} ] }]),
-		{ok, [], [], l2:uuid()}		
+		io:format("ETS hackney requests~n~p~n", [ets:info(atol_hackney_requests)]),
+		io:format("in fun ~p~n", [pid_to_list(self())]),
+		ets:insert(atol_hackney_requests, {UUID, [{api, APIFun}, {answer, Answer} ] }),
+		{ok, [], [], UUID}		
 	end,
 	Body = fun(Ref) ->
-		{UUID, PropList} = ets:lookup(hackney_requests, Ref),
-		{ok, proplists:get_value(body, PropList)}
+		[{Ref, PropList}] = ets:take(atol_hackney_requests, Ref),
+		case proplists:get_value(api, PropList) of
+			<<"sell">> ->
+				Answer = 
+			 	[
+					{status,<<"done">>},
+					{error, null},
+					{uuid, Ref}
+				],
+				ets:insert(atol_hackney_requests, {Ref, [{api, <<"sell_2">>}, {answer,Answer}]});
+			_ ->
+				[]
+		end,
+		Body = proplists:get_value(answer, PropList),
+		{ok, jsone:encode(Body)}
 	end,
 	%Res = application:start(atol),
 	atol:start(review),
@@ -111,7 +167,7 @@ teardown() ->
 	application:stop(chronos),
 	io:format("teardown~n", []),
 	meck:unload(hackney),
-	%ets:delete(hackney_requests),
+	ets:delete(atol_hackney_requests),
 	io:format("teardown~n", []),
 	[].
 %crud_db:teardown().
@@ -142,7 +198,7 @@ phone() ->
 	?LET(Phone,range(89155550000, 89155559999), l:i2b(Phone)).
 
 goods() ->
-	?LET(Goods,fixed_list([resize(15,range($a, $z))]), l:l2b(Goods)).
+	?LET(Goods,non_empty(fixed_list([resize(15,range($a, $z))])), l:l2b(Goods)).
 
 price() ->
 	non_neg_integer().

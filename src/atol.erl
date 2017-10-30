@@ -1,7 +1,7 @@
 -module(atol).
 -behaviour(supervisor).
 -behaviour(application).
--export([init/1, start/1, start/2, stop/1, sell/3, auth/0, verify_status/0, check_token/0]).
+-export([get_status/1, init/1, start/1, start/2, stop/1, sell/3, auth/0, verify_status/0, check_token/0]).
 
 -define(ETS, atol_ets).
 -define(TRANSACTIONS, atol_transactions).
@@ -17,9 +17,9 @@ init([Application]) ->
 	%{ok, AtolSettings} = application:get_env(Application, atol),
 	io:format("~nAll settings~n~p~n", [application:get_all_env()]),
 	{ok, AtolSettings} = application:get_env(atol, settings),
-	ets:new(?ETS, [{write_concurrency, true}, {read_concurrency, true}, set, named_table]),
+	ets:new(?ETS, [{write_concurrency, true}, {read_concurrency, true}, public, set, named_table]),
 	ets:insert(?ETS, AtolSettings),
-	ets:new(?TRANSACTIONS, [{write_concurrency, true}, {read_concurrency, true}, set, named_table]),
+	ets:new(?TRANSACTIONS, [{write_concurrency, true}, {read_concurrency, true}, public, set, named_table]),
 	io:format("=============== ATOL ===================~n~p\n",[AtolSettings]),
 	Pools = proplists:get_value(atol_workers, AtolSettings),
 	io:format("=============== ATOL ===================~n~p\n",[Pools]),
@@ -54,7 +54,7 @@ check_token() ->
 	Var = case ets:lookup(?ETS, token_time) of
 		[] -> 
 			check;
-		{_, TokenTime} ->
+		[{_, TokenTime}] ->
 			case qdate:compare(l:current_time(), qdate:to_now(qdate:add_minutes(30, TokenTime))) of
 				1 -> 
 					check;
@@ -86,9 +86,9 @@ verify_status(Key) ->
 verify_status(Key, List) ->
 	case Key of
 		'$end_of_table' -> List;
-		{UUID, Transaction} -> 
+		UUID -> 
 			Next = ets:next(?TRANSACTIONS, Key),
-			case atol:get(UUID) of
+			case atol:get_status(UUID) of
 				done -> 		
 					verify_status(Next, [Key|List]);
 				wait ->
@@ -107,7 +107,7 @@ delete_keys([H|T]) ->
 	ets:delete(?TRANSACTIONS, H),
 	delete_keys(T).
 
-get(UUID) ->
+get_status(UUID) ->
 	case check_token() of
 		ok ->
 			do_get(UUID);
@@ -116,9 +116,9 @@ get(UUID) ->
 	end.
 
 do_get(UUID) ->
-	{_,Group} = ets:lookup(?ETS, group),
-	{_,Token} = ets:lookup(?ETS, token),
-	{_,API} = ets:lookup(?ETS, api),
+	[{_,Group}] = ets:lookup(?ETS, group),
+	[{_,Token}] = ets:lookup(?ETS, token),
+	[{_,API}] = ets:lookup(?ETS, api),
 	Body = <<>>,
 	Site = l:l2b([<<"https://online.atol.ru/possystem/">>,
 		API,<<"/">>, Group, <<"/report/">>, UUID, <<"?tokenid=">>, Token ]),
@@ -126,6 +126,7 @@ do_get(UUID) ->
 	{ok, _, _, Ref} = hackney:request(get, Site, Headers, Body, []),
 	{ok, Answer} = hackney:body(Ref),
 	JSON = jsone:decode(Answer, [{object_format, proplist}]),
+	io:format("Body JSON~n~p~n", [JSON]),
 	Status = proplists:get_value(<<"status">>, JSON),
 	case Status of
 		<<"done">> -> 

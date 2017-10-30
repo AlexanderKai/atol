@@ -18,8 +18,8 @@ auth() ->
 	{ok, Answer} = hackney:body(Ref),
 	JSON = jsone:decode(Answer, [{object_format, proplist}]),
 	io:format("JSON ~p~n", [JSON]),
-	case proplists:get_value(<<"token">>, JSON) of
-		<<>> -> {error, Answer};
+	case proplists:get_value(<<"token">>, JSON, <<>>) of
+		<<"">> -> {error, Answer};
 		Token -> 
 			ets:insert(?ETS, {token, Token}),
 			ets:insert(?ETS, {token_time, l:current_time()}),
@@ -52,7 +52,7 @@ do_sell(Type, Id, Attributes, Items) ->
 	Email = proplists:get_value(email, Attributes, <<"">>),
 	Phone = proplists:get_value(phone, Attributes, <<"">>),
 	%CallbackUrl =proplists:get_value(callback_url, State),
-	{_,Payment_Address} = ets:lookup(?ETS, payment_address),
+	[{_,Payment_Address}] = ets:lookup(?ETS, payment_address),
 	Operation = l:a2b(Type),
 
 	Sum = lists:sum(
@@ -62,11 +62,11 @@ do_sell(Type, Id, Attributes, Items) ->
 		A <- Items
 		]
 	),
-	SumFormat = l:l2b(io_lib:format("~.2f",[Sum])),
+	SumFormat = l:l2b(io_lib:format("~.2f",[float(Sum)])),
 	Date = l:current_time(),
 	%UnixTime = qdate:to_unixtime(Date),
 	TimeStamp = l:l2b(qdate:to_string("d.m.Y H:i:s", Date)),
-	Data = l:l2b(
+	Data = 
 	[
 		{<<"external_id">>, Id},
 		{<<"receipt">>, 
@@ -82,9 +82,9 @@ do_sell(Type, Id, Attributes, Items) ->
 						{
 							[
 								{<<"name">>, proplists:get_value(name, I)},
-								{<<"price">>,l:l2b(io_lib:format("~.2f",[proplists:get_value(price, I)]))},
+								{<<"price">>,l:l2b(io_lib:format("~.2f",[float(proplists:get_value(price, I))]))},
 								{<<"quantity">>, proplists:get_value(quantity, I)},
-								{<<"sum">>,l:l2b(io_lib:format("~.2f",[proplists:get_value(quantity, I) * proplists:get_value(price, I)]))},
+								{<<"sum">>,l:l2b(io_lib:format("~.2f",[float(proplists:get_value(quantity, I) * proplists:get_value(price, I))]))},
 								{<<"tax">>, proplists:get_value(tax, I)}
 							]
 						}
@@ -110,7 +110,7 @@ do_sell(Type, Id, Attributes, Items) ->
 			]
 		},
 		{<<"timestamp">>, TimeStamp}
-	]),
+	],
 	io:format("~s\n", [jsone:encode(Data, [{indent, 1}, {space, 2}])]),
 	JSON = jsone:encode(Data),
 	%io:format("atol sell json~n~p~n", [JSON]),
